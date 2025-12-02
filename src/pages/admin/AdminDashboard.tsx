@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Package, FolderOpen, Settings, Plus } from "lucide-react";
+import { LogOut, Package, FolderOpen, Settings, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import { checkUserRole } from "@/lib/supabase";
 import ProductsTab from "@/components/admin/ProductsTab";
 import CategoriesTab from "@/components/admin/CategoriesTab";
 import SettingsTab from "@/components/admin/SettingsTab";
+import MessagesTab from "@/components/admin/MessagesTab";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -80,7 +81,7 @@ const AdminDashboard = () => {
       {/* Content */}
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="products" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-md">
+          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
             <TabsTrigger value="products">
               <Package className="h-4 w-4 mr-2" />
               Products
@@ -88,6 +89,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="categories">
               <FolderOpen className="h-4 w-4 mr-2" />
               Categories
+            </TabsTrigger>
+            <TabsTrigger value="messages">
+              <Mail className="h-4 w-4 mr-2" />
+              Messages
             </TabsTrigger>
             <TabsTrigger value="settings">
               <Settings className="h-4 w-4 mr-2" />
@@ -101,6 +106,10 @@ const AdminDashboard = () => {
 
           <TabsContent value="categories">
             <CategoriesTab />
+          </TabsContent>
+
+          <TabsContent value="messages">
+            <MessagesTab />
           </TabsContent>
 
           <TabsContent value="settings">

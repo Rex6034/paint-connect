@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { getSettings } from "@/lib/supabase";
+import { saveContactMessage } from "@/lib/contactMessages";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
@@ -46,15 +47,22 @@ const Contact = () => {
 
     setLoading(true);
     
-    // Simulate form submission (in a real app, this would send to backend)
-    setTimeout(() => {
+    try {
+      await saveContactMessage(formData.name, formData.phone, formData.message);
       toast({
         title: "Message Sent!",
         description: "We'll get back to you soon.",
       });
       setFormData({ name: "", phone: "", message: "" });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleWhatsApp = () => {
