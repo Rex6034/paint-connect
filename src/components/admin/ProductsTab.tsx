@@ -31,10 +31,7 @@ const ProductsTab = () => {
     setLoading(true);
     let query = supabase
       .from("products")
-      .select(`
-        *,
-        category:categories(name)
-      `)
+      .select("*")
       .order("created_at", { ascending: false });
 
     if (searchQuery) {
@@ -115,7 +112,6 @@ const ProductsTab = () => {
                 <TableHead>Image</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Code</TableHead>
-                <TableHead>Category</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Status</TableHead>
@@ -125,7 +121,7 @@ const ProductsTab = () => {
             <TableBody>
               {products.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     No products found
                   </TableCell>
                 </TableRow>
@@ -164,7 +160,6 @@ const ProductsTab = () => {
                     </TableCell>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell>{product.code || "-"}</TableCell>
-                    <TableCell>{product.category?.name || "-"}</TableCell>
                     <TableCell>${product.price?.toFixed(2) || "-"}</TableCell>
                     <TableCell>{product.stock_quantity}</TableCell>
                     <TableCell>

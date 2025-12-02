@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -20,6 +21,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { uploadMultipleImages, deleteImage } from "@/lib/imageUpload";
+import { getProductCategories, updateProductCategories } from "@/lib/supabase";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 
 interface ProductDialogProps {
@@ -31,6 +33,7 @@ interface ProductDialogProps {
 
 const ProductDialog = ({ open, onOpenChange, product, onSuccess }: ProductDialogProps) => {
   const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -41,7 +44,6 @@ const ProductDialog = ({ open, onOpenChange, product, onSuccess }: ProductDialog
   const [formData, setFormData] = useState({
     name: "",
     code: "",
-    category_id: "",
     brand: "",
     color: "",
     size: "",
@@ -61,7 +63,6 @@ const ProductDialog = ({ open, onOpenChange, product, onSuccess }: ProductDialog
       setFormData({
         name: product.name || "",
         code: product.code || "",
-        category_id: product.category_id || "",
         brand: product.brand || "",
         color: product.color || "",
         size: product.size || "",
@@ -88,11 +89,13 @@ const ProductDialog = ({ open, onOpenChange, product, onSuccess }: ProductDialog
       setImageUrls(normalized);
       setImagePreviews([]);
       setNewImages([]);
+      
+      // Load product categories
+      loadProductCategories(product.id);
     } else {
       setFormData({
         name: "",
         code: "",
-        category_id: "",
         brand: "",
         color: "",
         size: "",
@@ -101,11 +104,17 @@ const ProductDialog = ({ open, onOpenChange, product, onSuccess }: ProductDialog
         stock_quantity: "0",
         status: "active",
       });
+      setSelectedCategories([]);
       setImageUrls([]);
       setImagePreviews([]);
       setNewImages([]);
     }
   }, [product, open]);
+
+  const loadProductCategories = async (productId: string) => {
+    const categoryIds = await getProductCategories(productId);
+    setSelectedCategories(categoryIds);
+  };
 
   const getDisplayUrl = (pathOrUrl: string) => {
     if (!pathOrUrl) return "";
@@ -120,6 +129,14 @@ const ProductDialog = ({ open, onOpenChange, product, onSuccess }: ProductDialog
       .select("*")
       .order("name");
     setCategories(data || []);
+  };
+
+  const handleCategoryToggle = (categoryId: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
   };
 
   const handleFileSelect = (files: FileList | null) => {
@@ -226,7 +243,6 @@ const ProductDialog = ({ open, onOpenChange, product, onSuccess }: ProductDialog
       const payload = {
         name: formData.name,
         code: formData.code || null,
-        category_id: formData.category_id || null,
         brand: formData.brand || null,
         color: formData.color || null,
         size: formData.size || null,
@@ -238,6 +254,7 @@ const ProductDialog = ({ open, onOpenChange, product, onSuccess }: ProductDialog
       };
 
       let result;
+      let productId: string;
       if (product) {
         result = await supabase
           .from("products")
@@ -245,8 +262,10 @@ const ProductDialog = ({ open, onOpenChange, product, onSuccess }: ProductDialog
           .eq("id", product.id)
           .select()
           .single();
+        productId = product.id;
       } else {
         result = await supabase.from("products").insert([payload]).select().single();
+        productId = result.data?.id;
       }
 
       if (result.error) {
@@ -256,6 +275,21 @@ const ProductDialog = ({ open, onOpenChange, product, onSuccess }: ProductDialog
           variant: "destructive",
         });
       } else {
+        // Update product categories
+        if (selectedCategories.length > 0) {
+          const categoriesUpdated = await updateProductCategories(productId, selectedCategories);
+          if (!categoriesUpdated) {
+            toast({
+              title: "Warning",
+              description: "Product saved but categories could not be updated.",
+              variant: "destructive",
+            });
+          }
+        } else {
+          // Clear categories if none selected
+          await updateProductCategories(productId, []);
+        }
+
         toast({
           title: "Success",
           description: `Product ${product ? "updated" : "created"} successfully.`,
@@ -313,20 +347,31 @@ const ProductDialog = ({ open, onOpenChange, product, onSuccess }: ProductDialog
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-2 col-span-2">
+              <Label>Categories</Label>
+              <div className="grid grid-cols-2 gap-3 p-3 border rounded-lg">
+                {categories.length > 0 ? (
+                  categories.map((cat) => (
+                    <div key={cat.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`cat-${cat.id}`}
+                        checked={selectedCategories.includes(cat.id)}
+                        onCheckedChange={() => handleCategoryToggle(cat.id)}
+                      />
+                      <Label htmlFor={`cat-${cat.id}`} className="text-sm cursor-pointer font-normal">
+                        {cat.name}
+                      </Label>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground col-span-2">No categories available</p>
+                )}
+              </div>
+              {selectedCategories.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {selectedCategories.length} categor{selectedCategories.length === 1 ? "y" : "ies"} selected
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

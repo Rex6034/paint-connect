@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { getProduct, getSettings } from "@/lib/supabase";
+import { getProduct, getSettings, getCategories, getProductCategories } from "@/lib/supabase";
 import { supabase } from "@/integrations/supabase/client";
 import { generateWhatsAppLink } from "@/lib/whatsapp";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,8 @@ import { useToast } from "@/hooks/use-toast";
 const ProductDetail = () => {
   const { id } = useParams();
   const [product, setProduct] = useState<any>(null);
+  const [productCategories, setProductCategories] = useState<any[]>([]);
+  const [allCategories, setAllCategories] = useState<any[]>([]);
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -35,16 +37,25 @@ const ProductDetail = () => {
     
     setLoading(true);
     try {
-      const [productData, settingsData] = await Promise.all([
+      const [productData, settingsData, categoriesData, categoryIds] = await Promise.all([
         getProduct(id),
         getSettings(),
+        getCategories(),
+        getProductCategories(id),
       ]);
       
       setProduct(productData);
+      setAllCategories(categoriesData);
+      
+      // Map category IDs to category names
+      const categories = categoriesData.filter((cat: any) => categoryIds.includes(cat.id));
+      setProductCategories(categories);
+      
       if (settingsData) {
         setWhatsappNumber(settingsData.whatsapp_number);
       }
     } catch (error) {
+      console.error("Error loading product details:", error);
       toast({
         title: "Error",
         description: "Failed to load product details.",
@@ -221,10 +232,14 @@ const ProductDetail = () => {
 
             {/* Details */}
             <div className="space-y-6">
-              {product.category && (
-                <Badge variant="secondary" className="text-sm">
-                  {product.category.name}
-                </Badge>
+              {productCategories && productCategories.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {productCategories.map((category: any) => (
+                    <Badge key={category.id} variant="secondary" className="text-sm">
+                      {category.name}
+                    </Badge>
+                  ))}
+                </div>
               )}
               
               <h1 className="text-4xl font-bold">{product.name}</h1>
@@ -322,14 +337,14 @@ const ProductDetail = () => {
           <DialogHeader>
             <DialogTitle />
           </DialogHeader>
-          <div className="relative bg-black/90 flex items-center justify-center p-6">
-            <button
+          <div className="relative bg-white/90 flex items-center justify-center p-6">
+            {/* <button
               type="button"
               onClick={closeZoom}
               className="absolute top-4 right-4 z-20 bg-background/80 rounded-full p-2 hover:bg-background transition-colors"
             >
               <X className="w-5 h-5" />
-            </button>
+            </button> */}
 
             <button
               type="button"

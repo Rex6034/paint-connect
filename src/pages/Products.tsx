@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
-import { Search } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
@@ -13,30 +15,54 @@ const Products = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const itemsPerPage = 12;
   const { toast } = useToast();
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage(1); // Reset to page 1 when filters change
+    loadData();
+  }, [selectedCategories, searchQuery]);
 
   useEffect(() => {
     loadData();
-  }, [selectedCategory, searchQuery]);
+  }, [currentPage]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [productsData, categoriesData, settingsData] = await Promise.all([
-        getProducts(selectedCategory === "all" ? undefined : selectedCategory, searchQuery),
+      const [productsResult, categoriesData, settingsData] = await Promise.all([
+        getProducts(selectedCategories.length > 0 ? selectedCategories : undefined, searchQuery, currentPage, itemsPerPage),
         getCategories(),
         getSettings(),
       ]);
       
-      setProducts(productsData);
+      setProducts(productsResult.data);
+      setTotalCount(productsResult.count);
       setCategories(categoriesData);
       if (settingsData) {
         setWhatsappNumber(settingsData.whatsapp_number);
       }
     } catch (error) {
+      console.error("Error loading data:", error);
       toast({
         title: "Error",
         description: "Failed to load products. Please try again.",
@@ -46,6 +72,23 @@ const Products = () => {
       setLoading(false);
     }
   };
+
+  const handleCategoryToggle = (categoryId: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedCategories([]);
+    setSearchQuery("");
+  };
+
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const hasNextPage = currentPage < totalPages;
+  const hasPrevPage = currentPage > 1;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -62,10 +105,10 @@ const Products = () => {
           </div>
 
           {/* Filters */}
-          <div className="max-w-4xl mx-auto mb-12 space-y-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              {/* Search */}
-              <div className="relative flex-1">
+          <div className="max-w-6xl mx-auto mb-12">
+            {/* Search */}
+            <div className="mb-6">
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search products, codes, or brands..."
@@ -74,21 +117,64 @@ const Products = () => {
                   className="pl-10"
                 />
               </div>
+            </div>
 
-              {/* Category Filter */}
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full md:w-[200px]">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Category Filter Dropdown */}
+            <div className="relative inline-block w-full sm:w-auto" ref={dropdownRef}>
+              <Button
+                variant="outline"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full sm:w-auto flex items-center justify-between gap-2"
+              >
+                <span>
+                  {selectedCategories.length === 0
+                    ? "All Categories"
+                    : `${selectedCategories.length} categor${selectedCategories.length === 1 ? "y" : "ies"} selected`}
+                </span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+              </Button>
+
+              {isDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-background border rounded-lg shadow-lg z-50 p-3 w-full sm:w-80">
+                  <div className="max-h-64 overflow-y-auto space-y-2">
+                    {categories.map((category) => (
+                      <div key={category.id} className="flex items-center space-x-2 p-2 hover:bg-muted rounded">
+                        <Checkbox
+                          id={`category-${category.id}`}
+                          checked={selectedCategories.includes(category.id)}
+                          onCheckedChange={() => handleCategoryToggle(category.id)}
+                        />
+                        <Label
+                          htmlFor={`category-${category.id}`}
+                          className="text-sm cursor-pointer font-normal flex-1"
+                        >
+                          {category.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+
+                  {selectedCategories.length > 0 && (
+                    <div className="border-t mt-3 pt-3 flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedCategories([])}
+                        className="flex-1 text-xs"
+                      >
+                        Clear
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex-1 text-xs"
+                      >
+                        Done
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -103,34 +189,66 @@ const Products = () => {
               <p className="text-lg text-muted-foreground">No products found</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.map((product) => {
-                const imageUrls = (product.image_urls || (product.image_url ? [product.image_url] : [])).map((img: string) => {
-                  if (!img) return "";
-                  if (img.startsWith("http")) return img;
-                  const { data } = supabase.storage.from("product-images").getPublicUrl(img);
-                  return data.publicUrl || "";
-                }).filter((u: string) => !!u);
-                const imageUrl = imageUrls.length > 0 ? imageUrls[0] : undefined;
+            <>
+              <div className="grid grid-cols-1 xs:grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6 mb-8">
+                {products.map((product) => {
+                  const imageUrls = (product.image_urls || (product.image_url ? [product.image_url] : [])).map((img: string) => {
+                    if (!img) return "";
+                    if (img.startsWith("http")) return img;
+                    const { data } = supabase.storage.from("product-images").getPublicUrl(img);
+                    return data.publicUrl || "";
+                  }).filter((u: string) => !!u);
+                  const imageUrl = imageUrls.length > 0 ? imageUrls[0] : undefined;
 
-                return (
-                  <ProductCard
-                    key={product.id}
-                    id={product.id}
-                    name={product.name}
-                    description={product.description || ""}
-                    price={product.price}
-                    imageUrl={imageUrl}
-                    imageUrls={imageUrls}
-                    stockQuantity={product.stock_quantity}
-                    category={product.category}
-                    code={product.code}
-                    color={product.color}
-                    whatsappNumber={whatsappNumber}
-                  />
-                );
-              })}
-            </div>
+                  return (
+                    <ProductCard
+                      key={product.id}
+                      id={product.id}
+                      name={product.name}
+                      description={product.description || ""}
+                      price={product.price}
+                      imageUrl={imageUrl}
+                      imageUrls={imageUrls}
+                      stockQuantity={product.stock_quantity}
+                      category={undefined}
+                      code={product.code}
+                      color={product.color}
+                      whatsappNumber={whatsappNumber}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Pagination Controls */}
+              <div className="flex items-center justify-center gap-4 mt-8">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={!hasPrevPage}
+                  className="px-4 py-2 border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Page <span className="font-semibold">{currentPage}</span> of{" "}
+                    <span className="font-semibold">{totalPages}</span>
+                  </span>
+                </div>
+                <button
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                  disabled={!hasNextPage}
+                  className="px-4 py-2 border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+
+              {/* Results info */}
+              <div className="text-center mt-4 text-sm text-muted-foreground">
+                Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} products
+              </div>
+            </>
           )}
         </div>
       </div>
