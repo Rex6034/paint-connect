@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, MessageCircle, Package, Palette } from "lucide-react";
+import { ArrowLeft, MessageCircle, Package, Palette, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -66,6 +73,37 @@ const ProductDetail = () => {
         variant: "destructive",
       });
     }
+  };
+
+  // Zoom / lightbox handlers
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const openZoomAt = (index: number) => {
+    setSelectedImageIndex(index);
+    setZoomOpen(true);
+  };
+  const closeZoom = () => setZoomOpen(false);
+  const getDisplayImages = () => {
+    const imgs = product?.image_urls || (product?.image_url ? [product.image_url] : []);
+    return (imgs || [])
+      .map((img: string) => {
+        if (!img) return "";
+        if (img.startsWith("http")) return img;
+        const { data } = supabase.storage.from("product-images").getPublicUrl(img);
+        return data.publicUrl || "";
+      })
+      .filter((u: string) => !!u);
+  };
+
+  const showPrev = () => {
+    const imgs = getDisplayImages();
+    if (imgs.length === 0) return;
+    setSelectedImageIndex((prev) => (prev - 1 + imgs.length) % imgs.length);
+  };
+
+  const showNext = () => {
+    const imgs = getDisplayImages();
+    if (imgs.length === 0) return;
+    setSelectedImageIndex((prev) => (prev + 1) % imgs.length);
   };
 
   if (loading) {
@@ -137,7 +175,8 @@ const ProductDetail = () => {
                       <img
                         src={mainImage}
                         alt={product.name}
-                        className="object-cover w-full h-full"
+                        className="object-cover w-full h-full cursor-zoom-in"
+                        onClick={() => openZoomAt(safeIndex)}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-hero-from to-hero-to">
@@ -192,7 +231,7 @@ const ProductDetail = () => {
               
               {product.price && (
                 <p className="text-3xl font-bold text-primary">
-                  ${product.price.toFixed(2)}
+                  Rs. {product.price.toFixed(2)}
                 </p>
               )}
 
@@ -277,6 +316,53 @@ const ProductDetail = () => {
       </div>
 
       <Footer />
+      {/* Image Zoom Lightbox */}
+      <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
+        <DialogContent className="max-w-6xl w-full p-0">
+          <DialogHeader>
+            <DialogTitle />
+          </DialogHeader>
+          <div className="relative bg-black/90 flex items-center justify-center p-6">
+            <button
+              type="button"
+              onClick={closeZoom}
+              className="absolute top-4 right-4 z-20 bg-background/80 rounded-full p-2 hover:bg-background transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={showPrev}
+              className="absolute left-4 z-20 bg-background/80 rounded-full p-2"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+
+            <div className="max-h-[80vh] max-w-full flex items-center justify-center">
+              {(() => {
+                const imgs = getDisplayImages();
+                const idx = selectedImageIndex >= 0 && selectedImageIndex < imgs.length ? selectedImageIndex : 0;
+                const src = imgs[idx];
+                return src ? (
+                  <img src={src} alt={product.name} className="object-contain max-h-[80vh] max-w-full" />
+                ) : (
+                  <div className="text-white">No image</div>
+                );
+              })()}
+            </div>
+
+            <button
+              type="button"
+              onClick={showNext}
+              className="absolute right-4 z-20 bg-background/80 rounded-full p-2"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </div>
+          <DialogFooter />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

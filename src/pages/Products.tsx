@@ -6,7 +6,7 @@ import ProductCard from "@/components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { getProducts, getCategories } from "@/lib/supabase";
+import { getProducts, getCategories, getSettings } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
 const Products = () => {
@@ -15,6 +15,7 @@ const Products = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [whatsappNumber, setWhatsappNumber] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -24,13 +25,17 @@ const Products = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [productsData, categoriesData] = await Promise.all([
+      const [productsData, categoriesData, settingsData] = await Promise.all([
         getProducts(selectedCategory === "all" ? undefined : selectedCategory, searchQuery),
         getCategories(),
+        getSettings(),
       ]);
       
       setProducts(productsData);
       setCategories(categoriesData);
+      if (settingsData) {
+        setWhatsappNumber(settingsData.whatsapp_number);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -119,6 +124,9 @@ const Products = () => {
                     imageUrls={imageUrls}
                     stockQuantity={product.stock_quantity}
                     category={product.category}
+                    code={product.code}
+                    color={product.color}
+                    whatsappNumber={whatsappNumber}
                   />
                 );
               })}

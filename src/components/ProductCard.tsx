@@ -3,6 +3,7 @@ import { MessageCircle, Eye } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter } from "./ui/card";
 import { Badge } from "./ui/badge";
+import { generateWhatsAppLink } from "@/lib/whatsapp";
 
 interface ProductCardProps {
   id: string;
@@ -13,10 +14,20 @@ interface ProductCardProps {
   imageUrls?: string[];
   stockQuantity: number;
   category?: { name: string };
+  code?: string;
+  color?: string;
+  whatsappNumber?: string;
 }
 
-const ProductCard = ({ id, name, description, price, imageUrl, imageUrls, stockQuantity, category }: ProductCardProps) => {
+const ProductCard = ({ id, name, description, price, imageUrl, imageUrls, stockQuantity, category, code, color, whatsappNumber }: ProductCardProps) => {
   const inStock = stockQuantity > 0;
+
+  const handleWhatsAppClick = () => {
+    if (!whatsappNumber) return;
+    const productLink = `${window.location.origin}/products/${id}`;
+    const link = generateWhatsAppLink(whatsappNumber, name, code, color, productLink);
+    window.open(link, "_blank", "noopener,noreferrer");
+  };
   
   // Get the first image from imageUrls array, or fallback to imageUrl for backward compatibility
   const displayImage = imageUrls && imageUrls.length > 0 ? imageUrls[0] : imageUrl;
@@ -53,7 +64,7 @@ const ProductCard = ({ id, name, description, price, imageUrl, imageUrls, stockQ
         </h3>
         <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
         {price && (
-          <p className="text-xl font-bold text-primary">${price.toFixed(2)}</p>
+          <p className="text-xl font-bold text-primary">RS. {price.toFixed(2)}</p>
         )}
         {inStock ? (
           <p className="text-xs text-muted-foreground">{stockQuantity} in stock</p>
@@ -69,12 +80,14 @@ const ProductCard = ({ id, name, description, price, imageUrl, imageUrls, stockQ
             View Details
           </Button>
         </Link>
-        <Link to={`/products/${id}`} className="flex-1">
-          <Button className="w-full bg-whatsapp hover:bg-whatsapp/90 text-whatsapp-foreground group/btn">
-            <MessageCircle className="h-4 w-4 mr-2 group-hover/btn:rotate-12 transition-transform" />
-            WhatsApp
-          </Button>
-        </Link>
+        <Button 
+          onClick={handleWhatsAppClick}
+          disabled={!whatsappNumber}
+          className="flex-1 bg-whatsapp hover:bg-whatsapp/90 text-whatsapp-foreground group/btn" 
+        >
+          <MessageCircle className="h-4 w-4 mr-2 group-hover/btn:rotate-12 transition-transform" />
+          WhatsApp
+        </Button>
       </CardFooter>
     </Card>
   );
