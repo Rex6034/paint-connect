@@ -25,7 +25,7 @@ const AdminDashboard = () => {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      navigate("/auth");
+      navigate("/auth-5669");
       return;
     }
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { CartItem } from "@/contexts/CartContext";
 
 const whatsappSchema = z.object({
   productName: z.string().trim().min(1).max(200),
@@ -53,4 +54,34 @@ export const generateWhatsAppLink = (
 
   const encoded = encodeURIComponent(message);
   return `https://wa.me/${formattedPhone}?text=${encoded}`;
+};
+
+export const generateCartWhatsAppMessage = (items: CartItem[]): string => {
+  let message = `Hi, I'm interested in the following products from your website:\n\n`;
+  let totalAmount = 0;
+  
+  items.forEach((item, index) => {
+    message += `${index + 1}. *${item.name}*\n`;
+    if (item.code) {
+      message += `   Code: ${item.code}\n`;
+    }
+    message += `   Quantity: ${item.quantity}\n`;
+    // Only add price if it's greater than 0
+    if (item.price > 0) {
+      message += `   Price: Rs. ${item.price.toFixed(2)}\n`;
+      totalAmount += item.price * item.quantity;
+    }
+    message += `\n`;
+  });
+
+  message += `*Total Items: ${items.reduce((sum, item) => sum + item.quantity, 0)}*\n`;
+  // Only add total amount if there's a price
+  if (totalAmount > 0) {
+    message += `*Total Amount: Rs. ${totalAmount.toFixed(2)}*\n\n`;
+  } else {
+    message += `\n`;
+  }
+  message += `Could you please provide more information and confirm availability?`;
+
+  return message;
 };

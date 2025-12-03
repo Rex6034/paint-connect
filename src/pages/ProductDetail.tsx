@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, MessageCircle, Package, Palette, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ArrowLeft, MessageCircle, Package, Palette, ChevronLeft, ChevronRight, X, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import AddToCartDialog from "@/components/AddToCartDialog";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { getProduct, getSettings, getCategories, getProductCategories } from "@/lib/supabase";
@@ -25,6 +26,7 @@ const ProductDetail = () => {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isAddToCartOpen, setIsAddToCartOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -311,14 +313,26 @@ const ProductDetail = () => {
                 </div>
               )}
 
-              <Button
-                size="lg"
-                className="w-full bg-whatsapp hover:bg-whatsapp/90 text-whatsapp-foreground text-lg py-6 group"
-                onClick={handleWhatsAppClick}
-              >
-                <MessageCircle className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform" />
-                Buy on WhatsApp
-              </Button>
+              <div className="space-y-3">
+                <Button
+                  size="lg"
+                  onClick={() => setIsAddToCartOpen(true)}
+                  disabled={!inStock}
+                  className="w-full text-lg py-6 bg-primary hover:bg-primary/90 group"
+                >
+                  <ShoppingCart className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
+                  Add to Cart
+                </Button>
+
+                <Button
+                  size="lg"
+                  className="w-full bg-whatsapp hover:bg-whatsapp/90 text-whatsapp-foreground text-lg py-6 group"
+                  onClick={handleWhatsAppClick}
+                >
+                  <MessageCircle className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform" />
+                  Buy on WhatsApp
+                </Button>
+              </div>
 
               {!inStock && (
                 <p className="text-sm text-muted-foreground text-center">
@@ -331,6 +345,21 @@ const ProductDetail = () => {
       </div>
 
       <Footer />
+      
+      {/* Add to Cart Dialog */}
+      <AddToCartDialog
+        open={isAddToCartOpen}
+        onOpenChange={setIsAddToCartOpen}
+        product={{
+          id: product.id,
+          name: product.name,
+          code: product.code,
+          price: product.price || 0,
+          image_url: product.image_url || product.image_urls?.[0],
+          stock_quantity: product.stock_quantity,
+        }}
+      />
+
       {/* Image Zoom Lightbox */}
       <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
         <DialogContent className="max-w-6xl w-full p-0">
