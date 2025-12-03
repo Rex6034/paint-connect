@@ -47,7 +47,14 @@ const ProductCard = ({ id, name, description, price, imageUrl, imageUrls, stockQ
     if (!whatsappNumber) return;
     const productLink = `${window.location.origin}/products/${id}`;
     const link = generateWhatsAppLink(whatsappNumber, name, code, color, productLink);
-    window.open(link, "_blank", "noopener,noreferrer");
+    
+    // Mobile/iOS Safari compatibility
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS) {
+      window.location.href = link;
+    } else {
+      window.open(link, "_blank", "noopener,noreferrer");
+    }
   };
   
   return (

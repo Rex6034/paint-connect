@@ -32,7 +32,7 @@ const Home = () => {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             <h1 className="text-4xl md:text-6xl font-bold leading-tight">
-              Transform Your Space with
+              Colour Your World With
               <span className="block bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 Quality Paints
               </span>

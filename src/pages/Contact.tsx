@@ -68,7 +68,15 @@ const Contact = () => {
   const handleWhatsApp = () => {
     if (settings?.whatsapp_number) {
       const message = encodeURIComponent("Hi, I'd like to know more about your products.");
-      window.open(`https://wa.me/${settings.whatsapp_number.replace(/[\s\-\(\)]/g, "")}?text=${message}`, "_blank");
+      const whatsappLink = `https://wa.me/${settings.whatsapp_number.replace(/[\s\-\(\)]/g, "")}?text=${message}`;
+      
+      // Mobile/iOS Safari compatibility
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        window.location.href = whatsappLink;
+      } else {
+        window.open(whatsappLink, "_blank");
+      }
     }
   };
 

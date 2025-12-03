@@ -55,9 +55,19 @@ const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
         ? cleanedPhone
         : `+${cleanedPhone}`;
 
-      // Open WhatsApp with the message
+      // Build WhatsApp link
       const whatsappLink = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
-      window.open(whatsappLink, "_blank", "noopener,noreferrer");
+
+      // For mobile/iOS Safari compatibility, try multiple methods
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      
+      if (isIOS) {
+        // For iOS, use direct window.location for better compatibility
+        window.location.href = whatsappLink;
+      } else {
+        // For other browsers, use window.open
+        window.open(whatsappLink, "_blank", "noopener,noreferrer");
+      }
 
       // Clear cart after successful enquiry
       clearCart();
